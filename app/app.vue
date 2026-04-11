@@ -1,11 +1,27 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 
 const showJoinMenu = ref(false)
 const showChallenge = ref(false)
 const isVerified = ref(false)
 const turnstileContainer = ref(null)
-const imageUrl = ref('') // 新增：用来存放带动态 Token 的图片链接
+const imageUrl = ref('') 
+
+const isMobile = ref(false)
+
+const checkMobile = () => {
+  // 根据屏幕长宽比或宽度判断是否为手机版
+  isMobile.value = window.innerWidth <= 768 || (window.innerHeight > window.innerWidth)
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 
 // 提示 Toast 逻辑
 const showToast = ref(false)
@@ -79,8 +95,16 @@ watch(showChallenge, async (newVal) => {
     <div class="blur-overlay">
       <div class="hero-content">
         <h1 class="hero-title" aria-label="HLEO">
-          <svg viewBox="0 0 500 120" style="width: 100%; height: auto;">
+          <!-- 桌面端横向排列 -->
+          <svg v-if="!isMobile" viewBox="0 0 500 120" style="width: 100%; height: auto;">
             <text x="0" y="100" class="hero-text-svg">HLEO</text>
+          </svg>
+          <!-- 移动端四宫格排列 -->
+          <svg v-else viewBox="0 0 200 200" style="width: 100%; height: auto;" class="mobile-hero-svg">
+            <text x="0" y="80" class="hero-text-svg mobile-text">H</text>
+            <text x="100" y="80" class="hero-text-svg mobile-text">L</text>
+            <text x="0" y="180" class="hero-text-svg mobile-text">E</text>
+            <text x="100" y="180" class="hero-text-svg mobile-text">O</text>
           </svg>
         </h1>
         <div class="hero-buttons">
@@ -167,12 +191,12 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.2); /* 加上一点白底 */
+  background-color: rgba(255, 255, 255, 0.2);  
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   clip-path: polygon(0 0, 66.66% 0, 33.33% 100%, 0 100%);
   z-index: 10;
-  animation: slideInLeft 1.2s cubic-bezier(0, 1, 0.1, 1) 0.5s both; /* 添加0.5s延迟，使用both确保在延迟期间保持隐藏的初始状态 */
+  animation: slideInLeft 1.2s cubic-bezier(0, 1, 0.1, 1) 0.5s both;  
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -181,7 +205,7 @@ body {
 
 .hero-content {
   max-width: 600px;
-  margin-top: -10vh; /* 将整体内容向上移动 */
+  margin-top: -10vh;  
 }
 
 .hero-title {
@@ -190,12 +214,12 @@ body {
   font-size: 6rem;
   margin: 0 0 2rem 0;
   position: relative;
-  top: calc(-15vh - 5px); /* 将标题单独往上移，下面按钮原来位置不变 */
+  top: calc(-15vh - 5px);  
   color: #222;
-  letter-spacing: 25px; /* 减小字母间距 */
-  margin-right: -25px; /* 补偿因为 letter-spacing 导致的最右侧多出的空白，保持整体居中/对齐一致 */
-  animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s both; /* 适中的回弹效果，不夸张又足够明显 */
-  /* 去除原始文字占位，转给 SVG 处理高度 */
+  letter-spacing: 25px;  
+  margin-right: -25px;  
+  animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s both;  
+   
   height: 120px;
 }
 
@@ -207,7 +231,7 @@ body {
   stroke-linejoin: round;
   stroke-dasharray: 1500;
   stroke-dashoffset: 1500;
-  /* 第一步画线，修改为 1.7s 开始（等待底部毛玻璃进场完毕），第二步填色也对应向后顺延到 4.2s */
+   
   animation: 
     draw-hero-title 2.5s ease-in-out 1.7s forwards, 
     fill-hero-title 0.6s ease-in 3.1s forwards;
@@ -235,10 +259,10 @@ body {
   font-family: "LXGW WenKai", sans-serif;
   font-size: 1.1rem;
   padding: 0.7rem 1.8rem; 
-  border-radius: 999px; /* iOS经典药丸圆角 */
+  border-radius: 999px;  
   cursor: pointer;
-  transition: all 0.6s cubic-bezier(0.1, 0.9, 0.2, 1); /* 延长动画时间，保持起手快、后段平滑衰减 */
-  transform: perspective(500px) rotateX(0deg) rotateY(0deg) scale(1) translateY(0); /* 统一设定所有按钮的3D基准 */
+  transition: all 0.6s cubic-bezier(0.1, 0.9, 0.2, 1);  
+  transform: perspective(500px) rotateX(0deg) rotateY(0deg) scale(1) translateY(0);  
   text-align: center;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -253,7 +277,7 @@ body {
   font-weight: 600;
   box-shadow: 
     0 8px 32px rgba(0, 0, 0, 0.12), 
-    0 0 0px rgba(255, 255, 255, 0), /* 外部边缘高亮发光的透明占位，用于平滑过渡 */
+    0 0 0px rgba(255, 255, 255, 0),  
     inset 0 4px 6px -2px rgba(255, 255, 255, 0.9), 
     inset 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(24px) saturate(150%);
@@ -261,21 +285,21 @@ body {
 }
 
 .btn-secondary {
-  background-color: rgba(255, 255, 255, 0.05); /* 极薄透明底色 */
+  background-color: rgba(255, 255, 255, 0.05);  
   border: 1px solid rgba(255, 255, 255, 0.8);
   color: #222;
 }
 
 .hero-btn:nth-child(1) {
-  animation: slideInLeft 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards; /* 最左边：最慢 */
+  animation: slideInLeft 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards;  
 }
 
 .hero-btn:nth-child(2) {
-  animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards; /* 中间：居中速度 */
+  animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards;  
 }
 
 .hero-btn:nth-child(3) {
-  animation: slideInLeft 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards; /* 最右边：最快 */
+  animation: slideInLeft 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards;  
 }
 
 .btn-primary:hover {
@@ -286,8 +310,8 @@ body {
   transform: perspective(500px) rotateX(12deg) rotateY(-8deg) scale(1.04) translateY(-2px);
   box-shadow: 
     0 15px 40px rgba(0, 0, 0, 0.2),
-    0 0 20px rgba(255, 255, 255, 0.6), /* 外部边缘高亮发光 */
-    inset 0 0 15px rgba(255, 255, 255, 0.9), /* 内部边缘强化反射 */
+    0 0 20px rgba(255, 255, 255, 0.6),  
+    inset 0 0 15px rgba(255, 255, 255, 0.9),  
     inset 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
@@ -306,7 +330,7 @@ body {
   }
 }
 
-/* --- 弹窗样式 (iOS 26 拟物玻璃风) --- */
+ 
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -343,7 +367,7 @@ body {
   transform: perspective(1000px) rotateX(0deg);
   transition: all 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
   display: flex;
-  overflow: hidden; /* 防止内部圆角内容溢出 */
+  overflow: hidden;  
 }
 
 .modal-body {
@@ -442,12 +466,12 @@ body {
 .join-image-container {
   width: 100%;
   max-width: 350px;
-  aspect-ratio: 1 / 1; /* 正方形容器 */
+  aspect-ratio: 1 / 1;  
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.3); /* 若无图片时的毛玻璃占位符 */
-  border-radius: 24px; /* 内部预留的大圆角 */
+  background-color: rgba(255, 255, 255, 0.3);  
+  border-radius: 24px;  
   border: 1px dashed rgba(255, 255, 255, 0.6);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -456,7 +480,7 @@ body {
 .join-image {
   width: 100%; 
   height: 100%;
-  object-fit: cover; /* 保证图片填满正方形时不被拉伸 */
+  object-fit: cover;  
 }
 
 .join-title {
@@ -495,7 +519,7 @@ body {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
-/* 弹窗呼出时的入场退出动画 */
+ 
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.4s ease;
@@ -519,7 +543,7 @@ body {
   transform: perspective(1000px) rotateX(-10deg) translateY(-20px) scale(0.95);
 }
 
-/* Toast 组件样式 (iOS拟物风) */
+ 
 .dev-toast {
   position: fixed;
   top: 40px;
@@ -548,6 +572,59 @@ body {
 .dev-toast-icon {
   width: 20px;
   height: 20px;
-  stroke: #ff9500; /* iOS 警告橙色 */
+  stroke: #ff9500;  
+}
+
+ 
+@media (max-width: 768px), (orientation: portrait) {
+   
+  .blur-overlay {
+     
+    clip-path: polygon(0 0, 66.66% 0, 33.33% 100%, 0 100%);
+    padding-left: 10vw;
+    padding-right: 15vw;
+    align-items: flex-start;
+  }
+  
+  .hero-content {
+    margin-top: 10vh;  
+    display: flex;
+    flex-direction: column;
+    align-items: center;  
+  }
+
+  .hero-title {
+    font-size: 4rem;  
+    letter-spacing: 0;
+    margin-right: 0;
+    margin-bottom: 2rem;  
+    height: auto;  
+  }
+
+  .mobile-hero-svg {
+    height: auto;
+    width: 90%;  
+    max-width: 180px;
+    margin-bottom: 20px;
+  }
+
+   
+  .mobile-text {
+    font-size: 5.5rem;  
+    letter-spacing: 5px;
+  }
+
+
+  .hero-buttons {
+    flex-direction: column;
+    width: 100%;
+    max-width: 220px;
+    gap: 1.2rem;
+  }
+
+  .hero-btn {
+    width: 100%;
+    padding: 1rem 1.8rem;
+  }
 }
 </style>
