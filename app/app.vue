@@ -626,5 +626,62 @@ body {
     width: 100%;
     padding: 1rem 1.8rem;
   }
+
+  /* --- 弹窗的移动端上下布局 --- */
+  .modal-content {
+    width: 90vw;
+    height: auto;
+    min-height: 50vh;
+    max-height: 85vh; /* 允许手机版弹窗根据内容长高，避免被截断 */
+    padding: 24px 20px;
+    overflow-y: auto; /* 如果屏幕特别矮，允许内部上下滚动 */
+  }
+
+  .modal-body {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .modal-body.is-challenging {
+    gap: 20px; /* 挑战状态下，上下区域的间距 */
+  }
+
+  .modal-left {
+    width: 100%;
+    height: 0; /* 隐藏时折叠高度 */
+    transform: translateY(-20px) scale(0.9); /* 从X轴动画改为垂直Y轴动画 */
+  }
+
+  .modal-body.is-challenging .modal-left {
+    flex: auto;
+    width: 100%;
+    height: auto;
+    transform: translateY(0) scale(1);
+    margin-top: 10px;
+  }
+
+  .modal-right {
+    padding: 10px 0;
+    width: 100%;
+  }
+
+  .modal-body.is-challenging .modal-right {
+    flex: auto;
+    align-items: center; /* 确保移动端挑战状态下内容也是居中的 */
+    text-align: center;
+    padding: 10px 0;
+  }
+
+  .join-title {
+    font-size: 2rem;
+  }
+
+  .join-desc {
+    font-size: 1.05rem;
+  }
+
+  .join-action-btn {
+    align-self: center; /* 手机端让申请按钮始终居中 */
+  }
 }
 </style>
