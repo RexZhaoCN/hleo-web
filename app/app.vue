@@ -5,13 +5,114 @@ const showJoinMenu = ref(false)
 const showChallenge = ref(false)
 const isVerified = ref(false)
 const turnstileContainer = ref(null)
-const imageUrl = ref('') 
+const imageUrl = ref('')
+
+const showNewsMenu = ref(false)
+const posts = ref([])
+const postsPage = ref(1)
+const postsTotalPages = ref(1)
+const postsLoading = ref(false)
+const postsError = ref('')
+const selectedPost = ref(null)
+const postLoading = ref(false)
+const postError = ref('')
 
 const isMobile = ref(false)
 
 const checkMobile = () => {
-  // 根据屏幕长宽比或宽度判断是否为手机版
   isMobile.value = window.innerWidth <= 768 || (window.innerHeight > window.innerWidth)
+}
+
+const formatDate = (dateStr) => {
+  if (!dateStr) {
+    return ''
+  }
+
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) {
+    return dateStr
+  }
+
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
+
+const fetchPosts = async (page = 1) => {
+  postsLoading.value = true
+  postsError.value = ''
+
+  try {
+    const config = useRuntimeConfig()
+    const baseUrl = config.public.postApiUrl
+    const result = await $fetch(`${baseUrl}/api/posts`, {
+      params: {
+        page,
+        limit: 8
+      }
+    })
+
+    posts.value = Array.isArray(result?.data) ? result.data : []
+    postsPage.value = Number(result?.page) || page
+    postsTotalPages.value = Number(result?.totalPages) || 1
+  } catch (error) {
+    postsError.value = '新闻列表加载失败，请稍后重试。'
+    posts.value = []
+  } finally {
+    postsLoading.value = false
+  }
+}
+
+const openPost = async (filename) => {
+  if (!filename) {
+    return
+  }
+
+  selectedPost.value = {
+    title: '',
+    date: '',
+    content: ''
+  }
+  postLoading.value = true
+  postError.value = ''
+
+  try {
+    const config = useRuntimeConfig()
+    const baseUrl = config.public.postApiUrl
+    const detail = await $fetch(`${baseUrl}/api/post/${filename}`)
+
+    selectedPost.value = {
+      ...detail,
+      content: detail?.content || ''
+    }
+  } catch (error) {
+    postError.value = '文章加载失败，请稍后重试。'
+  } finally {
+    postLoading.value = false
+  }
+}
+
+const closeNews = () => {
+  showNewsMenu.value = false
+}
+
+const backToList = () => {
+  selectedPost.value = null
+  postError.value = ''
+}
+
+const prevPage = () => {
+  if (postsPage.value > 1) {
+    fetchPosts(postsPage.value - 1)
+  }
+}
+
+const nextPage = () => {
+  if (postsPage.value < postsTotalPages.value) {
+    fetchPosts(postsPage.value + 1)
+  }
 }
 
 onMounted(() => {
@@ -23,7 +124,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
 })
 
-// 提示 Toast 逻辑
 const showToast = ref(false)
 const toastMsg = ref('')
 const handleDevClick = (moduleName) => {
@@ -34,7 +134,6 @@ const handleDevClick = (moduleName) => {
   }, 2000)
 }
 
-// 若生成的单次有效图片被禁止访问/加载失败，重新回到验证模式
 const handleImageError = () => {
   if (window.turnstile && turnstileContainer.value) {
     window.turnstile.reset(turnstileContainer.value)
@@ -43,45 +142,51 @@ const handleImageError = () => {
   imageUrl.value = ''
 }
 
-// 监听弹窗关闭，重置内部状态
 watch(showJoinMenu, (newVal) => {
   if (!newVal) {
     setTimeout(() => {
       showChallenge.value = false
       isVerified.value = false
-    }, 400) // 等待退出动画完成
+    }, 400)
   }
 })
 
-// 当点击立即申请打开左侧区域时，挂载 5 秒盾
+watch(showNewsMenu, (newVal) => {
+  if (newVal) {
+    selectedPost.value = null
+    postError.value = ''
+    fetchPosts(1)
+  }
+})
+
 watch(showChallenge, async (newVal) => {
   if (newVal && !isVerified.value) {
-    await nextTick() // 等待 DOM 渲染出 turnstileContainer
+    await nextTick()
     const config = useRuntimeConfig()
-    const verifyApiUrl = config.public.turnstileApiUrl // 从注入环境拿到 CF Worker 网址
+    const verifyApiUrl = config.public.turnstileApiUrl
 
     if (window.turnstile && turnstileContainer.value) {
       try {
         window.turnstile.render(turnstileContainer.value, {
-          sitekey: '0x4AAAAAAC1AdJn72KZUnav-', // 前端真实 Sitekey
+          sitekey: '0x4AAAAAAC1AdJn72KZUnav-',
           callback: (token) => {
-            // 直接将带有临时 Token 的链接分配给图片地址
-            // 图片的 GET 请求会导致 Worker 去向 CF 认证这个由前端提交的 Token
             imageUrl.value = `${verifyApiUrl}/img?token=${token}`
             isVerified.value = true
           }
         })
-      } catch(e) { } 
+      } catch (e) {
+        // ignore
+      }
     } else {
       const timer = setInterval(() => {
         if (window.turnstile && turnstileContainer.value) {
           clearInterval(timer)
           window.turnstile.render(turnstileContainer.value, {
-             sitekey: '0x4AAAAAAC1AdJn72KZUnav-', 
-             callback: (token) => {
-               imageUrl.value = `${verifyApiUrl}/img?token=${token}`
-               isVerified.value = true
-             } 
+            sitekey: '0x4AAAAAAC1AdJn72KZUnav-',
+            callback: (token) => {
+              imageUrl.value = `${verifyApiUrl}/img?token=${token}`
+              isVerified.value = true
+            }
           })
         }
       }, 500)
@@ -95,11 +200,9 @@ watch(showChallenge, async (newVal) => {
     <div class="blur-overlay">
       <div class="hero-content">
         <h1 class="hero-title" aria-label="HLEO">
-          <!-- 桌面端横向排列 -->
           <svg v-if="!isMobile" viewBox="0 0 500 120" style="width: 100%; height: auto;">
             <text x="0" y="100" class="hero-text-svg">HLEO</text>
           </svg>
-          <!-- 移动端四宫格排列 -->
           <svg v-else viewBox="0 0 200 200" style="width: 100%; height: auto;" class="mobile-hero-svg">
             <text x="0" y="80" class="hero-text-svg mobile-text">H</text>
             <text x="100" y="80" class="hero-text-svg mobile-text">L</text>
@@ -109,14 +212,13 @@ watch(showChallenge, async (newVal) => {
         </h1>
         <div class="hero-buttons">
           <button class="hero-btn btn-primary" @click="showJoinMenu = true">加入我们</button>
-          <button class="hero-btn btn-secondary" @click="handleDevClick('新闻')">新闻</button>
+          <button class="hero-btn btn-secondary" @click="showNewsMenu = true">新闻</button>
           <button class="hero-btn btn-secondary" @click="handleDevClick('关于')">关于</button>
         </div>
       </div>
     </div>
     <NuxtRouteAnnouncer />
 
-    <!-- 顶端/底部的正在开发 Toast 提示 -->
     <Transition name="fade">
       <div v-if="showToast" class="dev-toast">
         <svg viewBox="0 0 24 24" fill="none" class="dev-toast-icon">
@@ -128,7 +230,70 @@ watch(showChallenge, async (newVal) => {
       </div>
     </Transition>
 
-    <!-- 弹出的拟物玻璃风菜单 -->
+    <Transition name="fade">
+      <div v-if="showNewsMenu" class="modal-overlay" @click="closeNews">
+        <div class="modal-content news-modal-content" @click.stop>
+          <button class="modal-close" @click="closeNews">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          <div class="news-view-switch">
+            <Transition name="news-slide" mode="out-in">
+              <div class="news-content" v-if="!selectedPost" key="news-list-view">
+                <h2 class="news-title">新闻</h2>
+
+                <div v-if="postsLoading" class="news-status">正在加载新闻...</div>
+                <div v-else-if="postsError" class="news-status news-error">{{ postsError }}</div>
+                <div v-else-if="!posts.length" class="news-status">暂无新闻内容。</div>
+
+                <div v-else class="news-list">
+                  <article
+                    v-for="post in posts"
+                    :key="post.filename"
+                    class="news-card"
+                    @click="openPost(post.filename)"
+                  >
+                    <img v-if="post.coverImage" :src="post.coverImage" :alt="post.title" class="news-cover" />
+                    <div v-else class="news-cover news-cover-placeholder"></div>
+                    <div class="news-card-body">
+                      <h3 class="news-card-title">{{ post.title }}</h3>
+                      <p class="news-card-date">{{ formatDate(post.date) }}</p>
+                      <p class="news-card-excerpt">{{ post.excerpt }}</p>
+                    </div>
+                  </article>
+                </div>
+
+                <div v-if="!postsLoading && postsTotalPages > 1" class="news-pagination">
+                  <button class="news-page-btn" :disabled="postsPage === 1" @click="prevPage">上一页</button>
+                  <span class="news-page-text">{{ postsPage }} / {{ postsTotalPages }}</span>
+                  <button class="news-page-btn" :disabled="postsPage === postsTotalPages" @click="nextPage">下一页</button>
+                </div>
+              </div>
+
+              <div class="news-content news-content-detail" v-else key="news-detail-view">
+                <button class="news-back-icon-btn" @click="backToList" aria-label="返回列表">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 18L9 12L15 6"></path>
+                  </svg>
+                </button>
+                <div class="news-detail-header">
+                  <h2 class="news-title">{{ selectedPost.title }}</h2>
+                  <p class="news-card-date">{{ formatDate(selectedPost.date) }}</p>
+                </div>
+
+                <div v-if="postLoading" class="news-status">正在加载文章...</div>
+                <div v-else-if="postError" class="news-status news-error">{{ postError }}</div>
+                <article v-else class="news-article" v-html="selectedPost.content"></article>
+              </div>
+            </Transition>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <Transition name="fade">
       <div v-if="showJoinMenu" class="modal-overlay" @click="showJoinMenu = false">
         <div class="modal-content" @click.stop>
@@ -140,21 +305,16 @@ watch(showChallenge, async (newVal) => {
           </button>
 
           <div class="modal-body" :class="{ 'is-challenging': showChallenge }">
-            <!-- 左侧：挑战/图片区域 -->
             <div class="modal-left">
-              <!-- 验证盾区域 -->
               <div v-show="!isVerified" class="cf-wrapper">
                 <div ref="turnstileContainer"></div>
               </div>
-              
-              <!-- 验证通过后可见的正方形图片 -->
-              <!-- 安全机制：一旦图片加载 403 失败，重置验证盾 -->
+
               <div v-if="isVerified" class="join-image-container">
                 <img :src="imageUrl" alt="加入我们宣传图" class="join-image" @error="handleImageError" />
               </div>
             </div>
 
-            <!-- 右侧：文字信息区域 -->
             <div class="modal-right">
               <div class="join-text-content">
                 <h2 class="join-title">👋欢迎来到 HLEO</h2>
@@ -166,7 +326,6 @@ watch(showChallenge, async (newVal) => {
               </div>
             </div>
           </div>
-          
         </div>
       </div>
     </Transition>
@@ -191,12 +350,12 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.2);  
+  background-color: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   clip-path: polygon(0 0, 66.66% 0, 33.33% 100%, 0 100%);
   z-index: 10;
-  animation: slideInLeft 1.2s cubic-bezier(0, 1, 0.1, 1) 0.5s both;  
+  animation: slideInLeft 1.2s cubic-bezier(0, 1, 0.1, 1) 0.5s both;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -205,7 +364,7 @@ body {
 
 .hero-content {
   max-width: 600px;
-  margin-top: -10vh;  
+  margin-top: -10vh;
 }
 
 .hero-title {
@@ -214,12 +373,11 @@ body {
   font-size: 6rem;
   margin: 0 0 2rem 0;
   position: relative;
-  top: calc(-15vh - 5px);  
+  top: calc(-15vh - 5px);
   color: #222;
-  letter-spacing: 25px;  
-  margin-right: -25px;  
-  animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s both;  
-   
+  letter-spacing: 25px;
+  margin-right: -25px;
+  animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s both;
   height: 120px;
 }
 
@@ -231,9 +389,8 @@ body {
   stroke-linejoin: round;
   stroke-dasharray: 1500;
   stroke-dashoffset: 1500;
-   
-  animation: 
-    draw-hero-title 2.5s ease-in-out 1.7s forwards, 
+  animation:
+    draw-hero-title 2.5s ease-in-out 1.7s forwards,
     fill-hero-title 0.6s ease-in 3.1s forwards;
 }
 
@@ -251,18 +408,18 @@ body {
 
 .hero-buttons {
   display: flex;
-  flex-direction: row; 
+  flex-direction: row;
   gap: 1rem;
 }
 
 .hero-btn {
   font-family: "LXGW WenKai", sans-serif;
   font-size: 1.1rem;
-  padding: 0.7rem 1.8rem; 
-  border-radius: 999px;  
+  padding: 0.7rem 1.8rem;
+  border-radius: 999px;
   cursor: pointer;
-  transition: all 0.6s cubic-bezier(0.1, 0.9, 0.2, 1);  
-  transform: perspective(500px) rotateX(0deg) rotateY(0deg) scale(1) translateY(0);  
+  transition: all 0.6s cubic-bezier(0.1, 0.9, 0.2, 1);
+  transform: perspective(500px) rotateX(0deg) rotateY(0deg) scale(1) translateY(0);
   text-align: center;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -275,31 +432,31 @@ body {
   border-left: 1px solid rgba(255, 255, 255, 0.6);
   color: #111;
   font-weight: 600;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.12), 
-    0 0 0px rgba(255, 255, 255, 0),  
-    inset 0 4px 6px -2px rgba(255, 255, 255, 0.9), 
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 0 0px rgba(255, 255, 255, 0),
+    inset 0 4px 6px -2px rgba(255, 255, 255, 0.9),
     inset 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
 }
 
 .btn-secondary {
-  background-color: rgba(255, 255, 255, 0.05);  
+  background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.8);
   color: #222;
 }
 
 .hero-btn:nth-child(1) {
-  animation: slideInLeft 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards;  
+  animation: slideInLeft 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards;
 }
 
 .hero-btn:nth-child(2) {
-  animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards;  
+  animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards;
 }
 
 .hero-btn:nth-child(3) {
-  animation: slideInLeft 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards;  
+  animation: slideInLeft 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s backwards;
 }
 
 .btn-primary:hover {
@@ -308,10 +465,10 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 1);
   border-left: 1px solid rgba(255, 255, 255, 1);
   transform: perspective(500px) rotateX(12deg) rotateY(-8deg) scale(1.04) translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 15px 40px rgba(0, 0, 0, 0.2),
-    0 0 20px rgba(255, 255, 255, 0.6),  
-    inset 0 0 15px rgba(255, 255, 255, 0.9),  
+    0 0 20px rgba(255, 255, 255, 0.6),
+    inset 0 0 15px rgba(255, 255, 255, 0.9),
     inset 0 -4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
@@ -330,7 +487,6 @@ body {
   }
 }
 
- 
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -358,7 +514,7 @@ body {
   border-left: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 28px;
   padding: 30px;
-  box-shadow: 
+  box-shadow:
     0 24px 64px rgba(0, 0, 0, 0.3),
     inset 0 0 20px rgba(255, 255, 255, 0.8),
     inset 0 -4px 10px rgba(0, 0, 0, 0.05);
@@ -367,7 +523,229 @@ body {
   transform: perspective(1000px) rotateX(0deg);
   transition: all 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
   display: flex;
-  overflow: hidden;  
+  overflow: hidden;
+}
+
+.news-modal-content {
+  flex-direction: column;
+}
+
+.news-view-switch {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.news-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.news-content-detail {
+  padding-top: 30px;
+}
+
+.news-title {
+  margin: 0;
+  color: #111;
+  font-size: 2rem;
+}
+
+.news-status {
+  padding: 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.45);
+  color: #333;
+}
+
+.news-error {
+  color: #7c1d1d;
+}
+
+.news-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 4px 0 0;
+  align-items: center;
+}
+
+.news-card {
+  width: 100%;
+  max-width: 740px;
+  height: 116px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.news-card:hover {
+  transform: scale(1.01);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+}
+
+.news-cover {
+  width: 116px;
+  min-width: 116px;
+  height: 116px;
+  object-fit: cover;
+}
+
+.news-cover-placeholder {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.45) 0%, rgba(217, 217, 217, 0.5) 100%);
+}
+
+.news-card-body {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.news-card-title {
+  margin: 0;
+  font-size: 1rem;
+  color: #111;
+}
+
+.news-card-date {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #666;
+}
+
+.news-card-excerpt {
+  margin: 0;
+  color: #333;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.news-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.news-page-btn,
+.news-back-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+}
+
+.news-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.news-page-text {
+  color: #333;
+}
+
+.news-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 30px;
+}
+
+.news-back-icon-btn {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 11;
+}
+
+.news-back-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.news-article {
+  flex: 1;
+  overflow-y: auto;
+  line-height: 1.8;
+  color: #222;
+  padding-right: 6px;
+}
+
+.news-article img {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  max-height: min(52vh, 460px);
+  height: auto;
+  border-radius: 12px;
+  margin: 10px auto;
+  object-fit: contain;
+}
+
+.news-article h1,
+.news-article h2,
+.news-article h3 {
+  color: #111;
+}
+
+.news-article h1:first-child {
+  display: none;
+}
+
+.news-slide-enter-active,
+.news-slide-leave-active {
+  transition: transform 320ms linear, opacity 320ms linear;
+}
+
+.news-slide-enter-from {
+  opacity: 0.12;
+  transform: translateX(56px);
+}
+
+.news-slide-enter-to {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.news-slide-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.news-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-56px);
 }
 
 .modal-body {
@@ -466,21 +844,21 @@ body {
 .join-image-container {
   width: 100%;
   max-width: 350px;
-  aspect-ratio: 1 / 1;  
+  aspect-ratio: 1 / 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.3);  
-  border-radius: 24px;  
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
   border: 1px dashed rgba(255, 255, 255, 0.6);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
 .join-image {
-  width: 100%; 
+  width: 100%;
   height: 100%;
-  object-fit: cover;  
+  object-fit: cover;
 }
 
 .join-title {
@@ -519,7 +897,6 @@ body {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
- 
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.4s ease;
@@ -543,7 +920,6 @@ body {
   transform: perspective(1000px) rotateX(-10deg) translateY(-20px) scale(0.95);
 }
 
- 
 .dev-toast {
   position: fixed;
   top: 40px;
@@ -559,7 +935,7 @@ body {
   color: #111;
   font-weight: 600;
   font-size: 1.05rem;
-  box-shadow: 
+  box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.1),
     inset 0 2px 4px rgba(255, 255, 255, 0.6);
   z-index: 10000;
@@ -572,48 +948,43 @@ body {
 .dev-toast-icon {
   width: 20px;
   height: 20px;
-  stroke: #ff9500;  
+  stroke: #ff9500;
 }
 
- 
 @media (max-width: 768px), (orientation: portrait) {
-   
   .blur-overlay {
-     
     clip-path: polygon(0 0, 66.66% 0, 33.33% 100%, 0 100%);
     padding-left: 10vw;
     padding-right: 15vw;
     align-items: flex-start;
   }
-  
+
   .hero-content {
-    margin-top: 10vh;  
+    margin-top: 10vh;
     display: flex;
     flex-direction: column;
-    align-items: center;  
+    align-items: center;
   }
 
   .hero-title {
-    font-size: 4rem;  
+    font-size: 4rem;
     letter-spacing: 0;
     margin-right: 0;
-    margin-bottom: 2rem;  
-    height: auto;  
+    margin-bottom: 2rem;
+    height: auto;
   }
 
   .mobile-hero-svg {
     height: auto;
-    width: 90%;  
+    width: 90%;
     max-width: 180px;
     margin-bottom: 20px;
   }
 
-   
   .mobile-text {
-    font-size: 5.5rem;  
+    font-size: 5.5rem;
     letter-spacing: 5px;
   }
-
 
   .hero-buttons {
     flex-direction: column;
@@ -627,14 +998,33 @@ body {
     padding: 1rem 1.8rem;
   }
 
-  /* --- 弹窗的移动端上下布局 --- */
   .modal-content {
     width: 90vw;
     height: auto;
     min-height: 50vh;
-    max-height: 85vh; /* 允许手机版弹窗根据内容长高，避免被截断 */
+    max-height: 85vh;
     padding: 24px 20px;
-    overflow-y: auto; /* 如果屏幕特别矮，允许内部上下滚动 */
+    overflow-y: auto;
+  }
+
+  .news-list {
+    align-items: stretch;
+  }
+
+  .news-cover {
+    width: 100%;
+    min-width: 0;
+    height: 140px;
+  }
+
+  .news-title {
+    font-size: 1.6rem;
+  }
+
+  .news-card {
+    max-width: none;
+    height: auto;
+    flex-direction: column;
   }
 
   .modal-body {
@@ -643,13 +1033,13 @@ body {
   }
 
   .modal-body.is-challenging {
-    gap: 20px; /* 挑战状态下，上下区域的间距 */
+    gap: 20px;
   }
 
   .modal-left {
     width: 100%;
-    height: 0; /* 隐藏时折叠高度 */
-    transform: translateY(-20px) scale(0.9); /* 从X轴动画改为垂直Y轴动画 */
+    height: 0;
+    transform: translateY(-20px) scale(0.9);
   }
 
   .modal-body.is-challenging .modal-left {
@@ -667,7 +1057,7 @@ body {
 
   .modal-body.is-challenging .modal-right {
     flex: auto;
-    align-items: center; /* 确保移动端挑战状态下内容也是居中的 */
+    align-items: center;
     text-align: center;
     padding: 10px 0;
   }
@@ -681,7 +1071,7 @@ body {
   }
 
   .join-action-btn {
-    align-self: center; /* 手机端让申请按钮始终居中 */
+    align-self: center;
   }
 }
 </style>
