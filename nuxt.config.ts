@@ -2,6 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  modules: ['@nuxt/content'],
   runtimeConfig: {
     public: {
       // 通过读取环境配置，注入前端所使用的跨域 Cloudflare Worker 外部接口地址，方便替换和切换

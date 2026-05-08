@@ -45,18 +45,24 @@ const fetchPosts = async (page = 1) => {
   postsError.value = ''
 
   try {
-    const config = useRuntimeConfig()
-    const baseUrl = config.public.postApiUrl
-    const result = await $fetch(`${baseUrl}/api/posts`, {
-      params: {
-        page,
-        limit: 8
-      }
-    })
+    const limit = 8
+    const skip = (page - 1) * limit
+    const [items, total] = await Promise.all([
+      queryContent('posts')
+        .only(['_path', 'title', 'date', 'excerpt', 'description', 'coverImage'])
+        .sort({ date: -1 })
+        .skip(skip)
+        .limit(limit)
+        .find(),
+      queryContent('posts').count()
+    ])
 
-    posts.value = Array.isArray(result?.data) ? result.data : []
-    postsPage.value = Number(result?.page) || page
-    postsTotalPages.value = Number(result?.totalPages) || 1
+    posts.value = (Array.isArray(items) ? items : []).map((item) => ({
+      ...item,
+      excerpt: item.excerpt || item.description || ''
+    }))
+    postsPage.value = page
+    postsTotalPages.value = Math.max(1, Math.ceil((Number(total) || 0) / limit))
   } catch (error) {
     postsError.value = '新闻列表加载失败，请稍后重试。'
     posts.value = []
@@ -65,8 +71,8 @@ const fetchPosts = async (page = 1) => {
   }
 }
 
-const openPost = async (filename) => {
-  if (!filename) {
+const openPost = async (path) => {
+  if (!path) {
     return
   }
 
@@ -79,14 +85,12 @@ const openPost = async (filename) => {
   postError.value = ''
 
   try {
-    const config = useRuntimeConfig()
-    const baseUrl = config.public.postApiUrl
-    const detail = await $fetch(`${baseUrl}/api/post/${filename}`)
-
-    selectedPost.value = {
-      ...detail,
-      content: detail?.content || ''
+    const detail = await queryContent(path).findOne()
+    if (!detail) {
+      throw new Error('Post not found')
     }
+
+    selectedPost.value = detail
   } catch (error) {
     postError.value = '文章加载失败，请稍后重试。'
   } finally {
@@ -252,9 +256,9 @@ watch(showChallenge, async (newVal) => {
                 <div v-else class="news-list">
                   <article
                     v-for="post in posts"
-                    :key="post.filename"
+                    :key="post._path"
                     class="news-card"
-                    @click="openPost(post.filename)"
+                    @click="openPost(post._path)"
                   >
                     <img v-if="post.coverImage" :src="post.coverImage" :alt="post.title" class="news-cover" />
                     <div v-else class="news-cover news-cover-placeholder"></div>
@@ -286,7 +290,9 @@ watch(showChallenge, async (newVal) => {
 
                 <div v-if="postLoading" class="news-status">正在加载文章...</div>
                 <div v-else-if="postError" class="news-status news-error">{{ postError }}</div>
-                <article v-else class="news-article" v-html="selectedPost.content"></article>
+                <article v-else class="news-article">
+                  <ContentRenderer :value="selectedPost" />
+                </article>
               </div>
             </Transition>
           </div>
