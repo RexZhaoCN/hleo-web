@@ -2,14 +2,18 @@
 title: "Hello HLEO"
 date: "2026-05-08"
 coverImage: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1200&auto=format&fit=crop"
-description: "HLEO 站点第一篇新闻，欢迎了解我们的最新动态。"
+description: "关于 HLEO"
 ---
 
 ## 欢迎
 
-这是示例文章内容。你可以在这里写 Markdown。
+这里是瀚林学校高中部电子爱好者建立的非学校官方组织 HLEO  
+（HanLin Electronic-enthusiast Organization）。  
 
-- 支持标题、列表、引用
-- 支持图片与链接
+大家可以在这里交流数码产品、电子技术、实时科技资讯等等。  
 
-> 如果不需要封面或摘要，删掉 `coverImage` 和 `description` 即可。
+其他学校同好朋友也可以拉进来唠嗑
+
+（此群可能后期用来年级性有关 classisland 的计划……？）  
+
+官方网站：hleo.top
