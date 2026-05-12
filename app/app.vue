@@ -48,17 +48,22 @@ const fetchPosts = async (page = 1) => {
     const limit = 8
     const skip = (page - 1) * limit
     const [items, total] = await Promise.all([
-      queryContent('posts')
-        .only(['_path', 'title', 'date', 'excerpt', 'description', 'coverImage'])
-        .sort({ date: -1 })
+      queryCollection('content')
+        .where('path', 'LIKE', '/posts/%')
+        .select('path', 'title', 'description', 'meta')
+        .order('stem', 'DESC')
         .skip(skip)
         .limit(limit)
-        .find(),
-      queryContent('posts').count()
+        .all(),
+      queryCollection('content')
+        .where('path', 'LIKE', '/posts/%')
+        .count()
     ])
 
     posts.value = (Array.isArray(items) ? items : []).map((item) => ({
       ...item,
+      date: item?.meta?.date || '',
+      coverImage: item?.meta?.coverImage || '',
       excerpt: item.excerpt || item.description || ''
     }))
     postsPage.value = page
@@ -85,7 +90,7 @@ const openPost = async (path) => {
   postError.value = ''
 
   try {
-    const detail = await queryContent(path).findOne()
+    const detail = await queryCollection('content').path(path).first()
     if (!detail) {
       throw new Error('Post not found')
     }
@@ -136,6 +141,19 @@ const handleDevClick = (moduleName) => {
   setTimeout(() => {
     showToast.value = false
   }, 2000)
+}
+
+const openAboutPost = async () => {
+  showNewsMenu.value = true
+  postError.value = ''
+
+  await fetchPosts(1)
+  await openPost('/posts/hello-world')
+
+  if (postError.value) {
+    selectedPost.value = null
+    handleDevClick('关于')
+  }
 }
 
 const handleImageError = () => {
@@ -217,7 +235,7 @@ watch(showChallenge, async (newVal) => {
         <div class="hero-buttons">
           <button class="hero-btn btn-primary" @click="showJoinMenu = true">加入我们</button>
           <button class="hero-btn btn-secondary" @click="showNewsMenu = true">新闻</button>
-          <button class="hero-btn btn-secondary" @click="handleDevClick('关于')">关于</button>
+          <button class="hero-btn btn-secondary" @click="openAboutPost">关于</button>
         </div>
       </div>
     </div>
@@ -256,9 +274,9 @@ watch(showChallenge, async (newVal) => {
                 <div v-else class="news-list">
                   <article
                     v-for="post in posts"
-                    :key="post._path"
+                    :key="post.path"
                     class="news-card"
-                    @click="openPost(post._path)"
+                    @click="openPost(post.path)"
                   >
                     <img v-if="post.coverImage" :src="post.coverImage" :alt="post.title" class="news-cover" />
                     <div v-else class="news-cover news-cover-placeholder"></div>
@@ -723,6 +741,16 @@ body {
 .news-article h2,
 .news-article h3 {
   color: #111;
+}
+
+.news-article a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.news-article a:hover {
+  opacity: 0.85;
 }
 
 .news-article h1:first-child {
