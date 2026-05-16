@@ -12,10 +12,10 @@ export default defineNuxtConfig({
   app: {
     head: {
       link: [
-        { rel: 'stylesheet', href: 'https://cdn.jsdmirror.com/gh/rexzhaocn/hleooss@master/fonts/mojang/stylesheet.css' },
-        { rel: 'stylesheet', href: 'https://cdn.jsdmirror.com/gh/rexzhaocn/hleooss@master/fonts/lxgw/LXGWWenKai-Regular/result.css' },
-        { rel: 'stylesheet', href: 'https://cdn.jsdmirror.com/gh/rexzhaocn/hleooss@master/fonts/lxgw/LXGWWenKai-Light/result.css' },
-        { rel: 'stylesheet', href: 'https://cdn.jsdmirror.com/gh/rexzhaocn/hleooss@master/fonts/lxgw/LXGWWenKai-Medium/result.css' }
+        { rel: 'stylesheet', href: 'https://oss1.236668.xyz/fonts/mojang/stylesheet.css' },
+        { rel: 'stylesheet', href: 'https://oss1.236668.xyz/fonts/lxgw/LXGWWenKai-Regular/result.css' },
+        { rel: 'stylesheet', href: 'https://oss1.236668.xyz/fonts/lxgw/LXGWWenKai-Light/result.css' },
+        { rel: 'stylesheet', href: 'https://oss1.236668.xyz/fonts/lxgw/LXGWWenKai-Medium/result.css' }
       ],
       script: [
         {
