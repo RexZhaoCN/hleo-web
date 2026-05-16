@@ -222,6 +222,31 @@ watch(showChallenge, async (newVal) => {
     <div class="blur-overlay">
       <div class="hero-content">
         <h1 class="hero-title" aria-label="HLEO">
+          <svg
+            v-if="!isMobile"
+            viewBox="0 0 128 128"
+            class="hero-logo-svg"
+            role="img"
+            aria-label="HLEO Logo"
+          >
+            <rect
+              x="2"
+              y="2"
+              width="124"
+              height="124"
+              rx="26"
+              ry="26"
+              class="hero-logo-outline"
+            />
+            <image
+              href="https://img.alicdn.com/imgextra/i1/O1CN015AnsEC2DSys4oHhF4_!!2215249208609-2-fleamarket.png"
+              x="0"
+              y="0"
+              width="128"
+              height="128"
+              class="hero-logo-image"
+            />
+          </svg>
           <svg v-if="!isMobile" viewBox="0 0 500 120" style="width: 100%; height: auto;">
             <text x="0" y="100" class="hero-text-svg">HLEO</text>
           </svg>
@@ -230,6 +255,25 @@ watch(showChallenge, async (newVal) => {
             <text x="100" y="80" class="hero-text-svg mobile-text">L</text>
             <text x="0" y="180" class="hero-text-svg mobile-text">E</text>
             <text x="100" y="180" class="hero-text-svg mobile-text">O</text>
+            <g class="mobile-logo-group" aria-label="HLEO Logo">
+              <rect
+                x="64"
+                y="64"
+                width="72"
+                height="72"
+                rx="12"
+                ry="12"
+                class="mobile-logo-outline"
+              />
+              <image
+                href="https://img.alicdn.com/imgextra/i1/O1CN015AnsEC2DSys4oHhF4_!!2215249208609-2-fleamarket.png"
+                x="64"
+                y="64"
+                width="72"
+                height="72"
+                class="mobile-logo-image"
+              />
+            </g>
           </svg>
         </h1>
         <div class="hero-buttons">
@@ -392,6 +436,9 @@ body {
 }
 
 .hero-title {
+  display: flex;
+  align-items: center;
+  gap: 24px;
   font-family: 'Mojang', sans-serif;
   font-weight: bold;
   font-size: 6rem;
@@ -403,6 +450,50 @@ body {
   margin-right: -25px;
   animation: slideInLeft 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.08) 0.8s both;
   height: 120px;
+}
+
+.hero-logo-svg {
+  width: clamp(88px, 10vw, 126px);
+  height: clamp(88px, 10vw, 126px);
+  flex-shrink: 0;
+  transform: translateY(-4px);
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.18));
+}
+
+.hero-logo-outline {
+  fill: transparent;
+  stroke: #222;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 520;
+  stroke-dashoffset: 520;
+  animation:
+    draw-logo-outline 1.2s ease-in-out 1.55s forwards,
+    hide-logo-outline 0.35s ease-in 2.95s forwards;
+}
+
+.hero-logo-image {
+  opacity: 0;
+  animation: fade-in-logo 0.6s ease-in 3.1s forwards;
+}
+
+@keyframes fade-in-logo {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes draw-logo-outline {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes hide-logo-outline {
+  to {
+    opacity: 0;
+  }
 }
 
 .hero-text-svg {
@@ -1004,23 +1095,50 @@ body {
 
   .hero-title {
     font-size: 4rem;
+    gap: 0;
     letter-spacing: 0;
     margin-right: 0;
     margin-bottom: 2rem;
     height: auto;
   }
 
-  .mobile-hero-svg {
-    height: auto;
-    width: 90%;
-    max-width: 180px;
-    margin-bottom: 20px;
+  .hero-logo-svg {
+    display: none;
   }
 
-  .mobile-text {
-    font-size: 5.5rem;
-    letter-spacing: 5px;
-  }
+.mobile-hero-svg {
+  height: auto;
+  width: 90%;
+  max-width: 180px;
+  margin-bottom: 20px;
+}
+
+.mobile-logo-outline {
+  fill: transparent;
+  stroke: #222;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+  animation:
+    draw-logo-outline 1.2s ease-in-out 1.55s forwards,
+    hide-logo-outline 0.35s ease-in 2.95s forwards;
+}
+
+.mobile-logo-image {
+  opacity: 0;
+  animation: fade-in-logo 0.6s ease-in 3.1s forwards;
+}
+
+.mobile-logo-group {
+  transform: translate(-18px, -8px);
+}
+
+.mobile-text {
+  font-size: 5.5rem;
+  letter-spacing: 5px;
+}
 
   .hero-buttons {
     flex-direction: column;

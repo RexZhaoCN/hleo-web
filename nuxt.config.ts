@@ -12,6 +12,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       link: [
+        { rel: 'icon', type: 'image/png', href: 'https://img.alicdn.com/imgextra/i2/O1CN01SHfKEs2DSys4rESz1_!!2215249208609-2-fleamarket.png' },
         { rel: 'stylesheet', href: 'https://oss1.236668.xyz/fonts/mojang/stylesheet.css' },
         { rel: 'stylesheet', href: 'https://oss1.236668.xyz/fonts/lxgw/LXGWWenKai-Regular/result.css' },
         { rel: 'stylesheet', href: 'https://oss1.236668.xyz/fonts/lxgw/LXGWWenKai-Light/result.css' },
