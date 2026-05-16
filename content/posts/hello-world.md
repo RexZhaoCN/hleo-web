@@ -14,6 +14,6 @@ description: "关于 HLEO"
 
 其他学校同好朋友也可以拉进来唠嗑
 
-（此群可能后期用来年级性有关 classisland 的计划……？）  
+（可能后期用来年级性有关 classisland 的计划……？）  
 
-官方网站：hleo.top
+注意！我们只有官方网站：hleo.top与群组HLEO，无任何其他社交媒体！

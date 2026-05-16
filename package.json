@@ -18,5 +18,10 @@
   },
   "devDependencies": {
     "@oxc-parser/binding-win32-x64-msvc": "^0.123.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }
